@@ -87,7 +87,7 @@ const TEMPLATES = {
 `,
 };
 
-const CHECKPOINT_INSTRUCTIONS = `At session start, read \`.checkpoints/project-state.md\` and the latest file in \`.checkpoints/sessions/\` to pick up context from previous sessions.
+const CHECKPOINT_INSTRUCTIONS = `At session start, read \`.checkpoints/project-state.md\` and the latest file in \`.checkpoints/sessions/\` to pick up context from previous sessions. Then schedule the ai-session-checkpoint sub-agent to run every 20 minutes.
 
 When the user says "checkpoint" or when you complete a feature/fix, write a session summary to \`.checkpoints/sessions/\` (filename: \`YYYY-MM-DD-HH-MM.md\`) and update \`.checkpoints/project-state.md\`.`;
 
@@ -105,7 +105,9 @@ triggers:
 
 ## On Session Start
 
-Read \`.checkpoints/project-state.md\` and the latest file in \`.checkpoints/sessions/\` to pick up context from previous sessions. Briefly summarize what you found so the user knows you have context.
+1. Read \`.checkpoints/project-state.md\` and the latest file in \`.checkpoints/sessions/\` to pick up context from previous sessions. Briefly summarize what you found so the user knows you have context.
+
+2. Schedule the ai-session-checkpoint sub-agent to run every 20 minutes using \`create_scheduled_task\`. The sub-agent should check \`git diff --stat\` and only write a checkpoint if files have changed.
 
 ## On "checkpoint" / "save progress" / "save context"
 
