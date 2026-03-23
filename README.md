@@ -2,7 +2,7 @@
 
 **Never lose AI coding session context again.**
 
-When your Claude Code context fills up or your Cursor tab crashes, all the context vanishes. `ai-session-checkpoint` silently saves session state to a local folder or Obsidian vault — so your next session picks up exactly where you left off.
+When your Claude Code context fills up or your Cursor tab crashes, all the context vanishes. `ai-session-checkpoint` silently saves session state to a folder — so your next session picks up exactly where you left off. Put that folder in Google Drive or iCloud and it syncs across machines automatically.
 
 ## Quick Start (30 seconds)
 
@@ -26,7 +26,7 @@ That's it. Open your AI editor, start coding. Checkpoints happen automatically.
 | **Manual checkpoint** | Say "checkpoint" in any AI editor |
 | **Session recovery** | New sessions read `.checkpoints/` on start — full context |
 | **Cross-editor** | Same `.checkpoints/` folder works in Claude Code + Cursor |
-| **Cross-machine** | Obsidian vault syncs via Google Drive / iCloud |
+| **Cross-machine** | Put checkpoint folder in Google Drive / iCloud — syncs automatically |
 | **Change detection** | Skips if no files changed — no noise from read-only work |
 | **Smart retention** | Keeps recent detail, compresses old history, max 50 files |
 
@@ -52,17 +52,46 @@ my-project/
 
 ## Storage Options
 
-**Local folder** (default — zero dependencies):
-```
-~/.ai-checkpoints/my-project/
+### Local folder (default)
+
+Checkpoints go to `~/.ai-checkpoints/my-project/`. Works immediately, zero setup.
+
+### Cloud sync (Google Drive / iCloud)
+
+To sync checkpoints across machines, put the folder in Google Drive or iCloud:
+
+```bash
+# 1. Create a folder in Google Drive (one time)
+mkdir -p ~/Google\ Drive/My\ Drive/ClaudeCode/
+
+# 2. Run install.sh from your project and enter the path when prompted
+cd ~/my-project
+curl -fsSL https://raw.githubusercontent.com/gokks8142/ai-session-checkpoint/main/install.sh | bash
+
+# When asked "Where should checkpoints be stored?", enter:
+#   ~/Google Drive/My Drive/ClaudeCode/
 ```
 
-**Obsidian vault** (for cross-machine sync):
-```
-Obsidian Vault/Org/ClaudeCode/my-project/
+That's it. Checkpoints sync automatically via Google Drive. On your other machine, create the same symlink and you have full context.
+
+### Obsidian (optional bonus)
+
+If you already use [Obsidian](https://obsidian.md), you can point your vault at the same Google Drive folder. This gives you search, graph view, and backlinks across your checkpoints — but it's purely optional. The tool works identically with or without Obsidian.
+
+## Link a Project
+
+The installer handles this automatically. If you need to do it manually:
+
+```bash
+# Symlink your project to the checkpoint folder
+ln -s ~/Google\ Drive/My\ Drive/ClaudeCode/my-project  ~/my-project/.checkpoints
 ```
 
-Switch anytime: `npx ai-session-checkpoint migrate --to obsidian`
+To verify:
+```bash
+ls -la .checkpoints/
+# Should show: project-state.md, sessions/, decisions.md, problems.md
+```
 
 ## Supported Editors
 
