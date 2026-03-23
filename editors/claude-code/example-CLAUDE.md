@@ -1,0 +1,3 @@
+At session start, read `.checkpoints/project-state.md` and the latest file in `.checkpoints/sessions/` to pick up context from previous sessions.
+
+When the user says "checkpoint" or when you complete a feature/fix, write a session summary to `.checkpoints/sessions/` (filename: `YYYY-MM-DD-HH-MM.md`) and update `.checkpoints/project-state.md`.
