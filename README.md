@@ -132,11 +132,24 @@ Hard cap: **50 files max** (configurable). Oldest deleted on rollover.
 
 ## Uninstall
 
+To completely remove ai-session-checkpoint from a project:
+
 ```bash
-rm .checkpoints                    # Remove symlink
-# Remove checkpoint lines from CLAUDE.md or .cursorrules
-# Optionally delete ~/.ai-checkpoints/my-project/
+# 1. Remove the symlink from your project
+rm .checkpoints
+
+# 2. Remove checkpoint instructions from CLAUDE.md
+#    Delete the lines that start with "At session start, read .checkpoints..."
+#    and "When the user says checkpoint..."
+
+# 3. Remove the Claude Code skill
+rm -rf ~/.claude/skills/ai-session-checkpoint/
+
+# 4. (Optional) Delete your checkpoint files
+rm -rf ~/.ai-checkpoints/my-project/
 ```
+
+**Note:** Step 4 is optional. Your checkpoint files contain useful session history — you may want to keep them even after uninstalling.
 
 ## License
 
