@@ -42,26 +42,7 @@ function writeIfMissing(filePath, content, label) {
   return false;
 }
 
-function findObsidianVault() {
-  const homedir = require("os").homedir();
-  const searchPaths = [
-    path.join(homedir, "Library/CloudStorage"),
-    path.join(homedir, "Documents"),
-  ];
-  for (const searchBase of searchPaths) {
-    if (!fs.existsSync(searchBase)) continue;
-    try {
-      const result = execSync(
-        `find "${searchBase}" -name ".obsidian" -maxdepth 5 -type d 2>/dev/null | head -1`,
-        { encoding: "utf8", timeout: 5000 }
-      ).trim();
-      if (result) {
-        return path.dirname(result);
-      }
-    } catch { /* ignore */ }
-  }
-  return null;
-}
+// No Obsidian-specific detection — user provides custom path if needed
 
 // --- Templates ---
 const TEMPLATES = {
@@ -176,24 +157,22 @@ async function init() {
   console.log("");
 
   // Step 1: Storage
-  const vault = findObsidianVault();
   let checkpointBase;
-
-  if (vault) {
-    console.log(cyan("? Where should checkpoints be stored?"));
-    console.log(`  ${bold("1)")} Local folder ${dim(`(${defaultCheckpointDir}/)`)}`);
-    console.log(`  ${bold("2)")} Obsidian vault ${dim(`(${vault})`)}`);
-    const choice = await ask("  Choose [1/2]", "1");
-    if (choice === "2") {
-      // Look for Org/ClaudeCode inside vault, or create it
-      const orgPath = path.join(vault, "Org", "ClaudeCode");
-      checkpointBase = orgPath;
+  console.log(cyan("? Where should checkpoints be stored?"));
+  console.log(`  ${bold("1)")} Local folder ${dim(`(${defaultCheckpointDir}/)`)}`);
+  console.log(`  ${bold("2)")} Custom path ${dim("(Google Drive, iCloud, Dropbox, etc.)")}`);
+  const choice = await ask("  Choose [1/2]", "1");
+  if (choice === "2") {
+    const customPath = await ask("  Enter path", "");
+    if (customPath) {
+      const resolved = customPath.replace(/^~/, homedir);
+      fs.mkdirSync(resolved, { recursive: true });
+      checkpointBase = resolved;
     } else {
       checkpointBase = defaultCheckpointDir;
     }
   } else {
     checkpointBase = defaultCheckpointDir;
-    console.log(`${dim("  Using local folder: " + defaultCheckpointDir)}`);
   }
 
   // Step 2: Project name
@@ -281,13 +260,15 @@ async function init() {
 
 async function migrate() {
   const args = process.argv.slice(3);
-  if (args[0] !== "--to" || args[1] !== "obsidian") {
-    console.log("Usage: ai-session-checkpoint migrate --to obsidian");
+  if (args[0] !== "--to" || !args[1]) {
+    console.log("Usage: ai-session-checkpoint migrate --to <path>");
+    console.log("Example: ai-session-checkpoint migrate --to ~/Google\\ Drive/My\\ Drive/ClaudeCode");
     process.exit(1);
   }
 
   const projectDir = process.cwd();
   const symlinkPath = path.join(projectDir, ".checkpoints");
+  const homedir = require("os").homedir();
 
   if (!fs.existsSync(symlinkPath)) {
     console.log("No .checkpoints found in current directory. Run 'init' first.");
@@ -295,18 +276,12 @@ async function migrate() {
   }
 
   const currentTarget = fs.readlinkSync(symlinkPath);
-  const vault = findObsidianVault();
-
-  if (!vault) {
-    console.log("No Obsidian vault found. Create one first, then retry.");
-    process.exit(1);
-  }
-
+  const newBase = args[1].replace(/^~/, homedir);
   const projectName = path.basename(projectDir);
-  const newTarget = path.join(vault, "Org", "ClaudeCode", projectName);
+  const newTarget = path.join(newBase, projectName);
 
   if (currentTarget === newTarget) {
-    console.log("Already using Obsidian vault. Nothing to migrate.");
+    console.log("Already using that path. Nothing to migrate.");
     process.exit(0);
   }
 

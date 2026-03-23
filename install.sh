@@ -34,42 +34,25 @@ echo ""
 
 # --- Step 1: Storage location ---
 echo -e "${CYAN}? Where should checkpoints be stored?${RESET}"
-
-# Try to detect Obsidian vault
-OBSIDIAN_VAULT=""
-for search_dir in \
-  "$HOME/Library/CloudStorage"/*/*/ksomu*/Org/ClaudeCode \
-  "$HOME/Library/CloudStorage"/GoogleDrive-*/My\ Drive/*/Org/ClaudeCode \
-  "$HOME/Documents"/*/.obsidian/.. \
-  "$HOME"/*/.obsidian/..
-do
-  if [ -d "$search_dir" ] 2>/dev/null; then
-    OBSIDIAN_VAULT="$search_dir"
-    break
-  fi
-done
-
-STORAGE_CHOICE=""
-if [ -n "$OBSIDIAN_VAULT" ]; then
-  echo -e "  ${BOLD}1)${RESET} Local folder (${DIM}${DEFAULT_CHECKPOINT_DIR}/${RESET})"
-  echo -e "  ${BOLD}2)${RESET} Obsidian vault (${DIM}auto-detected: ${OBSIDIAN_VAULT}${RESET})"
-  echo ""
-  read -p "  Choose [1/2] (default: 1): " STORAGE_CHOICE
-else
-  echo -e "  ${BOLD}1)${RESET} Local folder (${DIM}${DEFAULT_CHECKPOINT_DIR}/${RESET})"
-  echo -e "  ${DIM}  (No Obsidian vault detected)${RESET}"
-  echo ""
-  STORAGE_CHOICE="1"
-fi
-
+echo -e "  ${BOLD}1)${RESET} Local folder (${DIM}${DEFAULT_CHECKPOINT_DIR}/${RESET})"
+echo -e "  ${BOLD}2)${RESET} Custom path ${DIM}(Google Drive, iCloud, Dropbox, etc.)${RESET}"
+echo ""
+read -p "  Choose [1/2] (default: 1): " STORAGE_CHOICE
 STORAGE_CHOICE="${STORAGE_CHOICE:-1}"
 
-if [ "$STORAGE_CHOICE" = "2" ] && [ -n "$OBSIDIAN_VAULT" ]; then
-  CHECKPOINT_BASE="$OBSIDIAN_VAULT"
-  STORAGE_LABEL="Obsidian vault"
+if [ "$STORAGE_CHOICE" = "2" ]; then
+  read -p "  Enter path: " CUSTOM_PATH
+  if [ -z "$CUSTOM_PATH" ]; then
+    echo -e "  ${RED}!${RESET} No path entered. Using local folder."
+    CHECKPOINT_BASE="$DEFAULT_CHECKPOINT_DIR"
+  else
+    # Expand ~ if present
+    CUSTOM_PATH="${CUSTOM_PATH/#\~/$HOME}"
+    mkdir -p "$CUSTOM_PATH"
+    CHECKPOINT_BASE="$CUSTOM_PATH"
+  fi
 else
   CHECKPOINT_BASE="$DEFAULT_CHECKPOINT_DIR"
-  STORAGE_LABEL="Local folder"
 fi
 
 # --- Step 2: Project name ---
