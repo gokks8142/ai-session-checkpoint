@@ -13,13 +13,18 @@ const path = require("path");
 const { execSync } = require("child_process");
 const readline = require("readline");
 
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 
 // --- Helpers ---
 function ask(question, defaultAnswer) {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
   return new Promise((resolve) => {
-    const prompt = defaultAnswer ? `${question} (${defaultAnswer}): ` : `${question}: `;
+    const prompt = defaultAnswer
+      ? `${question} (${defaultAnswer}): `
+      : `${question}: `;
     rl.question(prompt, (answer) => {
       rl.close();
       resolve(answer.trim() || defaultAnswer || "");
@@ -27,11 +32,21 @@ function ask(question, defaultAnswer) {
   });
 }
 
-function green(t) { return `\x1b[32m${t}\x1b[0m`; }
-function blue(t) { return `\x1b[34m${t}\x1b[0m`; }
-function cyan(t) { return `\x1b[36m${t}\x1b[0m`; }
-function bold(t) { return `\x1b[1m${t}\x1b[0m`; }
-function dim(t) { return `\x1b[2m${t}\x1b[0m`; }
+function green(t) {
+  return `\x1b[32m${t}\x1b[0m`;
+}
+function blue(t) {
+  return `\x1b[34m${t}\x1b[0m`;
+}
+function cyan(t) {
+  return `\x1b[36m${t}\x1b[0m`;
+}
+function bold(t) {
+  return `\x1b[1m${t}\x1b[0m`;
+}
+function dim(t) {
+  return `\x1b[2m${t}\x1b[0m`;
+}
 
 function writeIfMissing(filePath, content, label) {
   if (!fs.existsSync(filePath)) {
@@ -87,9 +102,25 @@ const TEMPLATES = {
 `,
 };
 
-const CHECKPOINT_INSTRUCTIONS = `At session start, read \`.checkpoints/project-state.md\` and the latest file in \`.checkpoints/sessions/\` to pick up context from previous sessions. Then schedule the ai-session-checkpoint sub-agent to run every 20 minutes.
+const CHECKPOINT_INSTRUCTIONS = `## Session Context Recovery (IMPORTANT)
 
-When the user says "checkpoint" or when you complete a feature/fix, write a session summary to \`.checkpoints/sessions/\` (filename: \`YYYY-MM-DD-HH-MM.md\`) and update \`.checkpoints/project-state.md\`.`;
+**FIRST ACTION on every new conversation**: Before responding to the user, silently read these two files to recover context from previous sessions:
+1. \`.checkpoints/project-state.md\` — current project state
+2. The most recent file in \`.checkpoints/sessions/\` — latest session summary
+
+Then briefly tell the user what context you picked up (e.g., "I see from your last session you were working on X..."). If the files are empty or don't exist, skip silently.
+
+**Background auto-checkpoint**: After recovering context, use \`create_scheduled_task\` to schedule a background agent that runs every 20 minutes. The agent should:
+1. Run \`git diff --stat\` to check for changes
+2. If no changes, do nothing
+3. If changes exist, write a session snapshot to \`.checkpoints/sessions/YYYY-MM-DD-HH-MM.md\` and update \`.checkpoints/project-state.md\`
+
+**Manual checkpoint**: When the user says "checkpoint", "save progress", or "save context", OR when you complete a significant feature/fix:
+1. Run \`git diff --stat\` — skip if no changes
+2. Write \`.checkpoints/sessions/YYYY-MM-DD-HH-MM.md\` with: Summary, Files Changed, Decisions Made, Open Items
+3. Rewrite \`.checkpoints/project-state.md\` with current reality
+4. If more than 50 files in \`.checkpoints/sessions/\`, delete the oldest to stay at 50
+5. Confirm to the user what was saved`;
 
 const SKILL_CONTENT = `---
 name: ai-session-checkpoint
@@ -161,8 +192,12 @@ async function init() {
   // Step 1: Storage
   let checkpointBase;
   console.log(cyan("? Where should checkpoints be stored?"));
-  console.log(`  ${bold("1)")} Local folder ${dim(`(${defaultCheckpointDir}/)`)}`);
-  console.log(`  ${bold("2)")} Custom path ${dim("(Google Drive, iCloud, Dropbox, etc.)")}`);
+  console.log(
+    `  ${bold("1)")} Local folder ${dim(`(${defaultCheckpointDir}/)`)}`,
+  );
+  console.log(
+    `  ${bold("2)")} Custom path ${dim("(Google Drive, iCloud, Dropbox, etc.)")}`,
+  );
   const choice = await ask("  Choose [1/2]", "1");
   if (choice === "2") {
     const customPath = await ask("  Enter path", "");
@@ -183,7 +218,10 @@ async function init() {
 
   // Step 3: Detect editor
   let editorType = "claude-code";
-  if (fs.existsSync(path.join(projectDir, ".cursorrules")) && !fs.existsSync(path.join(projectDir, "CLAUDE.md"))) {
+  if (
+    fs.existsSync(path.join(projectDir, ".cursorrules")) &&
+    !fs.existsSync(path.join(projectDir, "CLAUDE.md"))
+  ) {
     editorType = "cursor";
   }
   console.log(`${dim("  Editor detected: " + editorType)}`);
@@ -195,7 +233,9 @@ async function init() {
   for (const [filename, content] of Object.entries(TEMPLATES)) {
     writeIfMissing(path.join(checkpointDir, filename), content, filename);
   }
-  console.log(`  ${green("✓")} Templates:   ${dim("project-state.md, decisions.md, problems.md, sessions/")}`);
+  console.log(
+    `  ${green("✓")} Templates:   ${dim("project-state.md, decisions.md, problems.md, sessions/")}`,
+  );
 
   // Step 5: Symlink
   const symlinkPath = path.join(projectDir, ".checkpoints");
@@ -205,7 +245,9 @@ async function init() {
   }
   if (!fs.existsSync(symlinkPath)) {
     fs.symlinkSync(checkpointDir, symlinkPath);
-    console.log(`  ${green("✓")} Symlink:     ${dim(`.checkpoints → ${checkpointDir}`)}`);
+    console.log(
+      `  ${green("✓")} Symlink:     ${dim(`.checkpoints → ${checkpointDir}`)}`,
+    );
   }
 
   // Step 6: Editor config
@@ -215,11 +257,15 @@ async function init() {
       const existing = fs.readFileSync(claudeMd, "utf8");
       if (!existing.includes(".checkpoints/project-state.md")) {
         fs.appendFileSync(claudeMd, "\n" + CHECKPOINT_INSTRUCTIONS + "\n");
-        console.log(`  ${green("✓")} CLAUDE.md:   ${dim("Added checkpoint instructions")}`);
+        console.log(
+          `  ${green("✓")} CLAUDE.md:   ${dim("Added checkpoint instructions")}`,
+        );
       }
     } else {
       fs.writeFileSync(claudeMd, CHECKPOINT_INSTRUCTIONS + "\n");
-      console.log(`  ${green("✓")} CLAUDE.md:   ${dim("Created with checkpoint instructions")}`);
+      console.log(
+        `  ${green("✓")} CLAUDE.md:   ${dim("Created with checkpoint instructions")}`,
+      );
     }
   }
 
@@ -229,20 +275,31 @@ async function init() {
       const existing = fs.readFileSync(cursorrules, "utf8");
       if (!existing.includes(".checkpoints/project-state.md")) {
         fs.appendFileSync(cursorrules, "\n" + CHECKPOINT_INSTRUCTIONS + "\n");
-        console.log(`  ${green("✓")} .cursorrules: ${dim("Added checkpoint instructions")}`);
+        console.log(
+          `  ${green("✓")} .cursorrules: ${dim("Added checkpoint instructions")}`,
+        );
       }
     } else {
       fs.writeFileSync(cursorrules, CHECKPOINT_INSTRUCTIONS + "\n");
-      console.log(`  ${green("✓")} .cursorrules: ${dim("Created with checkpoint instructions")}`);
+      console.log(
+        `  ${green("✓")} .cursorrules: ${dim("Created with checkpoint instructions")}`,
+      );
     }
   }
 
   // Step 7: Install skill
   if (editorType === "claude-code" || editorType === "both") {
-    const skillDir = path.join(homedir, ".claude", "skills", "ai-session-checkpoint");
+    const skillDir = path.join(
+      homedir,
+      ".claude",
+      "skills",
+      "ai-session-checkpoint",
+    );
     fs.mkdirSync(skillDir, { recursive: true });
     fs.writeFileSync(path.join(skillDir, "SKILL.md"), SKILL_CONTENT);
-    console.log(`  ${green("✓")} Skill:       ${dim("~/.claude/skills/ai-session-checkpoint/")}`);
+    console.log(
+      `  ${green("✓")} Skill:       ${dim("~/.claude/skills/ai-session-checkpoint/")}`,
+    );
   }
 
   // Step 8: .gitignore
@@ -250,13 +307,18 @@ async function init() {
   if (fs.existsSync(gitignorePath)) {
     const existing = fs.readFileSync(gitignorePath, "utf8");
     if (!existing.includes(".checkpoints")) {
-      fs.appendFileSync(gitignorePath, "\n# ai-session-checkpoint\n.checkpoints\n");
+      fs.appendFileSync(
+        gitignorePath,
+        "\n# ai-session-checkpoint\n.checkpoints\n",
+      );
       console.log(`  ${green("✓")} .gitignore:  ${dim("Added .checkpoints")}`);
     }
   }
 
   console.log("");
-  console.log(`${green(bold("Done!"))} Checkpoints stored in: ${dim(checkpointDir)}`);
+  console.log(
+    `${green(bold("Done!"))} Checkpoints stored in: ${dim(checkpointDir)}`,
+  );
   console.log("");
 }
 
@@ -264,7 +326,9 @@ async function migrate() {
   const args = process.argv.slice(3);
   if (args[0] !== "--to" || !args[1]) {
     console.log("Usage: ai-session-checkpoint migrate --to <path>");
-    console.log("Example: ai-session-checkpoint migrate --to ~/Google\\ Drive/My\\ Drive/ClaudeCode");
+    console.log(
+      "Example: ai-session-checkpoint migrate --to ~/Google\\ Drive/My\\ Drive/ClaudeCode",
+    );
     process.exit(1);
   }
 
@@ -273,7 +337,9 @@ async function migrate() {
   const homedir = require("os").homedir();
 
   if (!fs.existsSync(symlinkPath)) {
-    console.log("No .checkpoints found in current directory. Run 'init' first.");
+    console.log(
+      "No .checkpoints found in current directory. Run 'init' first.",
+    );
     process.exit(1);
   }
 
@@ -295,7 +361,9 @@ async function migrate() {
   fs.unlinkSync(symlinkPath);
   fs.symlinkSync(newTarget, symlinkPath);
 
-  console.log(`${green("✓")} Migrated: ${dim(currentTarget)} → ${dim(newTarget)}`);
+  console.log(
+    `${green("✓")} Migrated: ${dim(currentTarget)} → ${dim(newTarget)}`,
+  );
   console.log(`${green("✓")} Symlink updated`);
   console.log(`${green("✓")} All session history preserved`);
 }
