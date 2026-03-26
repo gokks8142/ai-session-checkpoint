@@ -171,9 +171,25 @@ if [ ! -e "$SYMLINK_PATH" ]; then
 fi
 
 # --- Step 6: Configure AI editor ---
-CHECKPOINT_INSTRUCTIONS='At session start, read `.checkpoints/project-state.md` and the latest file in `.checkpoints/sessions/` to pick up context from previous sessions. Then schedule the ai-session-checkpoint sub-agent to run every 20 minutes.
+CHECKPOINT_INSTRUCTIONS='## Session Context Recovery (IMPORTANT)
 
-When the user says "checkpoint" or when you complete a feature/fix, write a session summary to `.checkpoints/sessions/` (filename: `YYYY-MM-DD-HH-MM.md`) and update `.checkpoints/project-state.md`.'
+**FIRST ACTION on every new conversation**: Before responding to the user, silently read these two files to recover context from previous sessions:
+1. `.checkpoints/project-state.md` — current project state
+2. The most recent file in `.checkpoints/sessions/` — latest session summary
+
+Then briefly tell the user what context you picked up (e.g., "I see from your last session you were working on X..."). If the files are empty or do not exist, skip silently.
+
+**Background auto-checkpoint**: After recovering context, use `create_scheduled_task` to schedule a background agent that runs every 20 minutes. The agent should:
+1. Run `git diff --stat` to check for changes
+2. If no changes, do nothing
+3. If changes exist, write a session snapshot to `.checkpoints/sessions/YYYY-MM-DD-HH-MM.md` and update `.checkpoints/project-state.md`
+
+**Manual checkpoint**: When the user says "checkpoint", "save progress", or "save context", OR when you complete a significant feature/fix:
+1. Run `git diff --stat` — skip if no changes
+2. Write `.checkpoints/sessions/YYYY-MM-DD-HH-MM.md` with: Summary, Files Changed, Decisions Made, Open Items
+3. Rewrite `.checkpoints/project-state.md` with current reality
+4. If more than 50 files in `.checkpoints/sessions/`, delete the oldest to stay at 50
+5. Confirm to the user what was saved'
 
 # Claude Code: CLAUDE.md
 if [ "$EDITOR_TYPE" = "claude-code" ] || [ "$EDITOR_TYPE" = "both" ]; then
