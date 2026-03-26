@@ -20,15 +20,15 @@ That's it. Open your AI editor, start coding. Checkpoints happen automatically.
 
 ## What It Does
 
-| Feature | How |
-|---------|-----|
-| **Auto-checkpoint** | Background agent saves every 20 min (Claude Code) |
-| **Manual checkpoint** | Say "checkpoint" in any AI editor |
-| **Session recovery** | New sessions read `.checkpoints/` on start — full context |
-| **Cross-editor** | Same `.checkpoints/` folder works in Claude Code + Cursor |
-| **Cross-machine** | Put checkpoint folder in Google Drive / iCloud — syncs automatically |
-| **Change detection** | Skips if no files changed — no noise from read-only work |
-| **Smart retention** | Keeps recent detail, compresses old history, max 50 files |
+| Feature               | How                                                                  |
+| --------------------- | -------------------------------------------------------------------- |
+| **Auto-checkpoint**   | Background agent saves every 20 min (Claude Code)                    |
+| **Manual checkpoint** | Say "checkpoint" in any AI editor                                    |
+| **Session recovery**  | New sessions read `.checkpoints/` on start — full context            |
+| **Cross-editor**      | Same `.checkpoints/` folder works in Claude Code + Cursor            |
+| **Cross-machine**     | Put checkpoint folder in Google Drive / iCloud — syncs automatically |
+| **Change detection**  | Skips if no files changed — no noise from read-only work             |
+| **Smart retention**   | Keeps recent detail, compresses old history, max 50 files            |
 
 ## How It Works
 
@@ -88,6 +88,7 @@ ln -s ~/Google\ Drive/My\ Drive/ClaudeCode/my-project  ~/my-project/.checkpoints
 ```
 
 To verify:
+
 ```bash
 ls -la .checkpoints/
 # Should show: project-state.md, sessions/, decisions.md, problems.md
@@ -95,22 +96,24 @@ ls -la .checkpoints/
 
 ## Supported Editors
 
-| Editor | Auto-checkpoint | Manual checkpoint | Config file |
-|--------|:-:|:-:|---|
-| Claude Code | ✅ | ✅ | `CLAUDE.md` |
-| Cursor | — | ✅ | `.cursorrules` |
+| Editor      | Auto-checkpoint | Manual checkpoint | Config file    |
+| ----------- | :-------------: | :---------------: | -------------- |
+| Claude Code |       ✅        |        ✅         | `CLAUDE.md`    |
+| Cursor      |        —        |        ✅         | `.cursorrules` |
 
 The checkpoint format is editor-agnostic — any AI editor that reads files can use it.
 
 ## What Gets Saved
 
 **Session file** (`sessions/YYYY-MM-DD-HH-MM.md`):
+
 - Summary of what was accomplished
 - Files changed and why
 - Decisions made
 - Open items and next steps
 
 **Project state** (`project-state.md`):
+
 - What the project is and tech stack
 - What's built and working
 - What's in progress
@@ -121,12 +124,12 @@ The checkpoint format is editor-agnostic — any AI editor that reads files can 
 
 Checkpoints don't pile up forever:
 
-| Time window | Rule |
-|-------------|------|
-| Last 24 hours | Keep all |
-| Last 7 days | Keep 1 per day |
-| Last 30 days | Keep 1 per week |
-| Older | Delete |
+| Time window   | Rule            |
+| ------------- | --------------- |
+| Last 24 hours | Keep all        |
+| Last 7 days   | Keep 1 per day  |
+| Last 30 days  | Keep 1 per week |
+| Older         | Delete          |
 
 Hard cap: **50 files max** (configurable). Oldest deleted on rollover.
 
@@ -139,8 +142,8 @@ To completely remove ai-session-checkpoint from a project:
 rm .checkpoints
 
 # 2. Remove checkpoint instructions from CLAUDE.md
-#    Delete the lines that start with "At session start, read .checkpoints..."
-#    and "When the user says checkpoint..."
+#    Delete the "## Session Context Recovery (IMPORTANT)" section
+#    and everything under it (through the "Manual checkpoint" subsection)
 
 # 3. Remove the Claude Code skill
 rm -rf ~/.claude/skills/ai-session-checkpoint/
